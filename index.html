@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>रोज़ की रोशनी — Daily Inspiration</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#B8A9E8">
+    <link rel="icon" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 300ms ease-out forwards; }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#FAFAF8] min-h-screen">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        const ACCENT = { lilac: '#B8A9E8', amber: '#F5A623', teal: '#4ECDC4', coral: '#FF6B6B', green: '#4ADE80', ink: '#1A1A1A' };
+        const CATEGORIES = ['प्रेरणा', 'सफलता', 'जीवन', 'प्रेम', 'साहस', 'खुशी', 'धैर्य', 'आत्मविश्वास'];
+        const CATEGORY_ICONS = { 'प्रेरणा': 'Sparkles', 'सफलता': 'Star', 'जीवन': 'Leaf', 'प्रेम': 'Heart', 'साहस': 'Flame', 'खुशी': 'Sun', 'धैर्य': 'Compass', 'आत्मविश्वास': 'Feather' };
+        const CATEGORY_COLORS = { 'प्रेरणा': '#B8A9E8', 'सफलता': '#F5A623', 'जीवन': '#4ECDC4', 'प्रेम': '#FF6B6B', 'साहस': '#FF6B6B', 'खुशी': '#4ADE80', 'धैर्य': '#4ECDC4', 'आत्मविश्वास': '#B8A9E8' };
+
+        const DEFAULT_QUOTES = [
+            { id: 1, quote: "अंधेरा चाहे कितना भी गहरा क्यों न हो, एक छोटा सा दीया ही काफी होता है उसे मिटाने के लिए।", author: "अज्ञात", category: "प्रेरणा" },
+            { id: 2, quote: "सफलता का कोई शॉर्टकट नहीं होता, यह कड़ी मेहनत, लगन और धैर्य का फल है।", author: "अज्ञात", category: "सफलता" },
+            { id: 3, quote: "जिंदगी वो नहीं जो हमारे साथ होती है, जिंदगी वो है जो हम उसके साथ करते हैं।", author: "अज्ञात", category: "जीवन" },
+            { id: 4, quote: "गिरना बुरा नहीं है, बुरा ये है कि गिरकर उठो नहीं।", author: "अज्ञात", category: "साहस" },
+            { id: 5, quote: "अगर आप खुद पर विश्वास करते हैं, तो आधी जंग वहीं जीत चुके होते हैं।", author: "स्वामी विवेकानंद", category: "आत्मविश्वास" },
+            { id: 6, quote: "खुश रहना है तो दूसरों की तुलना करना छोड़ दो, हर किसी की अपनी कहानी है।", author: "अज्ञात", category: "खुशी" },
+            { id: 7, quote: "धैर्य रखो, सही समय पर सब कुछ अच्छा होता है।", author: "अज्ञात", category: "धैर्य" },
+            { id: 8, quote: "प्यार वो भाषा है जो बिना शब्दों के भी समझी जा सकती है।", author: "अज्ञात", category: "प्रेम" },
+            { id: 9, quote: "बड़े सपने देखो और उन्हें पूरा करने की हिम्मत रखो।", author: "अब्दुल कलाम", category: "प्रेरणा" },
+            { id: 10, quote: "हर दिन एक नया मौका है, बस उसे पहचानने की देर है।", author: "अज्ञात", category: "प्रेरणा" },
+            { id: 11, quote: "मंजिल उन्हीं को मिलती है जिनके सपनों में जान होती है, पंखों से कुछ नहीं होता हौसलों से उड़ान होती है।", author: "अब्दुल कलाम", category: "सफलता" },
+            { id: 12, quote: "जो हुआ अच्छा हुआ, जो हो रहा है अच्छा हो रहा है, जो होगा वो भी अच्छा ही होगा।", author: "भगवद गीता", category: "जीवन" },
+            { id: 13, quote: "डर के आगे जीत है।", author: "अज्ञात", category: "साहस" },
+            { id: 14, quote: "उठो, जागो और तब तक मत रुको जब तक लक्ष्य प्राप्त न हो जाए।", author: "स्वामी विवेकानंद", category: "सफलता" },
+            { id: 15, quote: "जीवन में कठिनाइयां हमें तोड़ने नहीं, बल्कि गढ़ने आती हैं।", author: "अज्ञात", category: "जीवन" }
+        ];
+
+        function safe(v) { return String(v ?? '').trim(); }
+        function todayKey() { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+        function App() {
+            const [quotes, setQuotes] = useState([]);
+            const [activeTab, setActiveTab] = useState('today');
+            const [search, setSearch] = useState('');
+            const [categoryFilter, setCategoryFilter] = useState('all');
+            const [favorites, setFavorites] = useState(new Set());
+            const [copiedId, setCopiedId] = useState(null);
+            const [showAdd, setShowAdd] = useState(false);
+            const [newQuote, setNewQuote] = useState({ quote: '', author: '', category: 'प्रेरणा' });
+            const [randomIdx, setRandomIdx] = useState(0);
+            const [insightQuote, setInsightQuote] = useState(null);
+            const [insightData, setInsightData] = useState(null);
+
+            useEffect(() => {
+                const stored = localStorage.getItem('roshni_quotes');
+                if (stored) { setQuotes(JSON.parse(stored)); } else { setQuotes(DEFAULT_QUOTES); localStorage.setItem('roshni_quotes', JSON.stringify(DEFAULT_QUOTES)); }
+                const favs = localStorage.getItem('roshni_favorites');
+                if (favs) setFavorites(new Set(JSON.parse(favs)));
+            }, []);
+
+            function toggleFav(id) {
+                setFavorites(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); localStorage.setItem('roshni_favorites', JSON.stringify([...next])); return next; });
+            }
+
+            const todaysQuote = useMemo(() => { if (!quotes.length) return null; const key = todayKey(); let hash = 0; for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0; return quotes[hash % quotes.length]; }, [quotes]);
+            const randomQuote = useMemo(() => { if (!quotes.length) return null; return quotes[randomIdx % quotes.length]; }, [quotes, randomIdx]);
+            const filtered = useMemo(() => quotes.filter(q => { if (search) { const s = search.toLowerCase(); if (!q.quote.toLowerCase().includes(s) && !(q.author||'').toLowerCase().includes(s)) return false; } if (categoryFilter !== 'all' && q.category !== categoryFilter) return false; return true; }), [quotes, search, categoryFilter]);
+
+            function handleAdd() { if (!newQuote.quote.trim()) return; const added = [{ id: Date.now(), quote: newQuote.quote.trim(), author: newQuote.author.trim() || 'अज्ञात', category: newQuote.category }, ...quotes]; setQuotes(added); localStorage.setItem('roshni_quotes', JSON.stringify(added)); setShowAdd(false); setNewQuote({ quote: '', author: '', category: 'प्रेरणा' }); }
+            function handleDelete(id, e) { e.stopPropagation(); const updated = quotes.filter(q => q.id !== id); setQuotes(updated); localStorage.setItem('roshni_quotes', JSON.stringify(updated)); }
+            function copyText(q, e) { if(e) e.stopPropagation(); navigator.clipboard.writeText('"'+q.quote+'" — '+q.author); setCopiedId(q.id); setTimeout(() => setCopiedId(null), 1500); }
+
+            function openInsight(q, e) {
+                if(e) e.stopPropagation();
+                setInsightQuote(q);
+                setInsightData({
+                    meaning: '"'+q.quote+'" — यह विचार हमें सिखाता है कि जीवन की हर परिस्थिति में हमारे पास एक सकारात्मक चुनाव करने की शक्ति होती है। चाहे कठिनाई कितनी भी बड़ी हो, आपका एक छोटा सा प्रयास सकारात्मक बदलाव ला सकता है।',
+                    benefits: ["यह आपके मन से निराशा को दूर कर आत्मबल बढ़ाता है।", "कठिन समय में धैर्य और निरंतर प्रयास करने की प्रेरणा देता है।", "आपके आस-पास के लोगों को भी सकारात्मकता का संदेश देता है।"],
+                    practicalTips: ["हर सुबह उठकर 2 मिनट इस विचार पर मनन करें।", "जब भी कमज़ोर महसूस करें, इस पंक्ति को मन में दोहराएँ।", "इस विचार को अपने Whatsapp Status या Diary में लिखें।"],
+                    reflection: "क्या आज आप अपने जीवन में छोटा सा सकारात्मक बदलाव लाने के लिए तैयार हैं?"
+                });
+            }
+
+            const tabs = [
+                { id: 'today', label: 'आज का विचार', icon: 'Sunrise' },
+                { id: 'all', label: 'सारे विचार', icon: 'BookOpen' },
+                { id: 'favorites', label: 'पसंदीदा', icon: 'Heart' },
+            ];
+
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-6">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center text-xl">🌞</div>
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900">रोज़ कीरोशनी</h1>
+                                <p className="text-xs text-gray-400">Daily Inspiration  · {new Date().toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-[#B8A9E8] rounded-full text-sm font-semibold hover:opacity-90 transition">+ नया जोड़ें</button>
+                    </div>
+
+                    <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-full w-max">
+                        {tabs.map(tab => (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition ${activeTab === tab.id ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>{tab.label}</button>
+                        ))}
+                    </div>
+
+                    {activeTab === 'today' && todaysQuote && (
+                        <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100 shadow-sm animate-fade-in">
+                            <div className="h-1 -mx-6 md:-mx-8 -mt-6 md:-mt-8 mb-6 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, #B8A9E8, #F5A623, #4ECDC4)' }}></div>
+                            <p className="text-2xl md:text-3xl font-semibold leading-relaxed text-gray-800">"{todaysQuote.quote}"</p>
+                            <p className="mt-4 text-sm text-gray-500">— {todaysQuote.author}</p>
+                            <div className="mt-6 flex flex-wrap gap-2">
+                                <button onClick={(e) => openInsight(todaysQuote, e)} className="px-4 py-2 bg-[#B8A9E8] text-xs font-bold rounded-full hover:opacity-90 transition">💡 AI से समझें</button>
+                                <button onClick={(e) => copyText(todaysQuote, e)} className="px-4 py-2 border text-xs font-bold rounded-full hover:bg-gray-50 transition">{copiedId === todaysQuote.id ? '✓ कॉपी हो गया' : '📈कॉपी करें'}</button>
+                                <button onClick={() => toggleFav(todaysQuote.id)} className="px-4 py-2 border text-xs font-bold rounded-full hover:bg-gray-50 transition">{favorites.has(todaysQuote.id) ? '❤️ हटाएँ' : '🤍 सहेजें'}</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'today' && randomQuote && (
+                        <div className="mt-6 bg-white rounded-2xl p-6 border border-gray-100 animate-fade-in cursor-pointer hover:shadow-md transition" onClick={(e) => openInsight(randomQuote, e)}>
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-semibold text-gray-400 uppercase">एक और रोशनी</p>
+                                <button onClick={(e) => { e.stopPropagation(); setRandomIdx(i => i + 1 + Math.floor(Math.random() * (quotes.length - 1))); }} className="text-xs text-[#B8A9E8] font-semibold hover:underline">🔄 बदलें</button>
+                            </div>
+                            <p className="text-lg text-gray-800 leading-relaxed">"{randomQuote.quote}"</p>
+                            <p className="mt-2 text-xs text-gray-500">— {randomQuote.author}</p>
+                        </div>
+                    )}
+
+                    {activeTab === 'all' && (
+                        <div className="space-y-4 animate-fade-in">
+                            <div className="flex gap-3 flex-wrap">
+                                <input type="text" placeholder="खोजें..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-[200px] max-w-md p-2.5 rounded-full border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#B8A9E8]/30" />
+                                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="p-2.5 rounded-full border border-gray-200 text-sm bg-white focus:outline-none">{['all',...CATEGORIES].map(c => <option key={c} value={c}>{c === 'all' ? 'सभी श्रेणियाँ' : c}</option>)}</select>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                {filtered.map(q => (
+                                    <div key={q.id} onClick={(e) => openInsight(q, e)} className="bg-white p-5 rounded-2xl border border-gray-100 hover:shadow-md hover:border-[#B8A9E8]/40 transition cursor-pointer group">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-[#B8A9E8]/10 text-[#5B21B6] border-[#B8A9E8]/30">{q.category}</span>
+                                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#B8A9E8]/10 text-[#5B21B6] opacity-0 group-hover:opacity-100 transition">💡 AI</span>
+                                        </div>
+                                        <p className="text-sm text-gray-800 leading-relaxed">"{q.quote}"</p>
+                                        <div className="mt-4 flex justify-between items-center text-xs text-gray-500">
+                                            <span>— {q.author}</span>
+                                            <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                                                <button onClick={(e) => copyText(q, e)} className="p-1 hover:text-black">📋</button>
+                                                <button onClick={() => toggleFav(q.id)} className="p-1">{favorites.has(q.id) ? '❤️' : '🤍'}</button>
+                                                <button onClick={(e) => handleDelete(q.id, e)} className="p-1 hover:text-red-500">🗑️</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'favorites' && (
+                        <div className="grid md:grid-cols-2 gap-4 animate-fade-in">
+                            {quotes.filter(q => favorites.has(q.id)).length === 0 && (
+                                <div className="col-span-full text-center py-16 bg-white rounded-2xl border border-gray-100">
+                                    <p className="text-3xl mb-3">🤍</p>
+                                    <p className="text-sm text-gray-400">अभी कोई पसंदीदा नहीं है</p>
+                                </div>
+                            )}
+                            {quotes.filter(q => favorites.has(q.id)).map(q => (
+                                <div key={q.id} onClick={(e) => openInsight(q, e)} className="bg-white p-5 rounded-2xl border border-gray-100 hover:shadow-md transition cursor-pointer">
+                                    <p className="text-sm text-gray-800">"{q.quote}"</p>
+                                    <div className="mt-4 flex justify-between items-center text-xs text-gray-500">
+                                        <span>— {q.author}</span>
+                                        <button onClick={() => toggleFav(q.id)} className="p-1">❤️</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {insightQuote && (
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setInsightQuote(null)}>
+                            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                                <div className="h-1 -mx-6 -mt-6 mb-4 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, #B8A9E8, #F5A623, #4ECDC4)' }}></div>
+                                <h3 className="font-bold text-lg text-[#5B21B6] mb-2">💡 विचार मीमांसा</h3>
+                                <p className="text-sm text-gray-800 italic bg-gray-50 p-3 rounded-xl">"{insightQuote.quote}"</p>
+                                <p className="text-xs text-gray-400 mt-1">— {insightQuote.author}</p>
+                                
+                                <div className="mt-4 space-y-4">
+                                    <div>
+                                        <h4 className="font-semibold text-xs text-gray-400 uppercase flex items-center gap-1">💡 गहरा अर्थ</h4>
+                                        <p className="text-sm text-gray-600 mt-1">{insightData.meaning}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-xs text-gray-400 uppercase flex items-center gap-1">📈 जीवन में सकारात्मक प्रभाव</h4>
+                                        <ul className="list-disc list-inside text-sm text-gray-600 mt-1 space-y-1">{insightData.benefits.map((b,i) => <li key={i}>{b}</li>)}</ul>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-xs text-gray-400 uppercase flex items-center gap-1">🎯 व्यवहार में कैसे लाएं</h4>
+                                        <ul className="list-disc list-inside text-sm text-gray-600 mt-1 space-y-1">{insightData.practicalTips.map((t,i) => <li key={i}>{t}</li>)}</ul>
+                                    </div>
+                                    <div className="bg-teal-50 p-3 rounded-xl border border-teal-100">
+                                        <h4 className="font-semibold text-xs text-teal-700 uppercase flex items-center gap-1">💬 ख़ुद से पूछें</h4>
+                                        <p className="text-sm text-gray-700 mt-1 italic">{insightData.reflection}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setInsightQuote(null)} className="mt-6 w-full py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition">बंद करें</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showAdd && (
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowAdd(false)}>
+                            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-bold text-lg mb-4">✨ नया सुविचार जोड़ें</h3>
+                                <textarea placeholder="सुविचार यहाँ लिखें..." value={newQuote.quote} onChange={e => setNewQuote(p => ({...p, quote: e.target.value}))} className="w-full p-3 border rounded-xl text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#B8A9E8]/30" rows={3} />
+                                <input type="text" placeholder="लेखक का नाम..." value={newQuote.author} onChange={e => setNewQuote(p => ({...p, author: e.target.value}))} className="w-full p-2.5 border rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#B8A9E8]/30" />
+                                <div className="flex flex-wrap gap-1.5 mb-4">
+                                    {CATEGORIES.map(c => (
+                                        <button key={c} onClick={() => setNewQuote(p => ({...p, category: c}))} className={`text-xs px-3 py-1.5 rounded-full font-medium border transition ${newQuote.category === c ? 'bg-[#B8A9E8]/20 text-[#5B21B6] border-[#B8A9E8]/50' : 'bg-white text-gray-500 border-gray-200'}`}>{c}</button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setShowAdd(false)} className="flex-1 py-2 border rounded-full text-sm font-semibold hover:bg-gray-50 transition">रद्द करें</button>
+                                    <button onClick={handleAdd} className="flex-1 py-2 bg-[#B8A9E8] rounded-full text-sm font-semibold hover:opacity-90 transition">जोड़ें</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); }); }
+    </script>
+</body>
+</html>
